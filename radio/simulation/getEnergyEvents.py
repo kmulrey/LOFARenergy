@@ -20,6 +20,22 @@ plt.ion()
 
 #reco_dir='/vol/astro7/lofar/sim/pipeline/production_analysis_oct2018/'
 event_path='/vol/astro7/lofar/sim/pipeline/events/'
+#event_path='/Users/kmulrey/radio/events/'
+
+def integrate(r,flu0,flu1):
+    n=len(r)
+    dr=r[1]-r[0]
+    integral=0
+    for i in np.arange(n-1):
+        r0=r[i]
+        r1=r[i+1]
+        val0=r0*(flu0[i]+flu1[i])
+        val1=r1*(flu0[i+1]+flu1[i+1])
+        integral=integral+(val0+val1)*0.5*dr
+    
+    
+    
+    return 2*np.pi*integral*6.2415e18 # to eV
 
 
 
@@ -57,11 +73,14 @@ S_basic_list=[]
 Srd_1_list=[]
 Srd_2_list=[]
 StoE_list=[]
+rho_list=[]
+a_list=[]
 
 
 
 
-filename=type+'_runs.txt'
+filename='data/'+type+'_test_runs.txt'
+#filename=type+'_runs.txt'
 
 sim_dir=[]
 runnr=[]
@@ -80,13 +99,15 @@ with open(filename) as f:
 
 
 
-for i in np.arange(start_id,stop_id):
-    #for i in np.arange(2,3):
+#for i in np.arange(start_id,stop_id):
+for i in np.arange(2):
+#for i in np.arange(a,a+1):
     #try:
     for r in np.arange(1):
         
         event= sim_dir[i].split('events/')[1].split('/')[0]
-       
+        print '{0}  {1}'.format(sim_dir[i], runnr[i])
+        sim_zenith, sim_azimuth, sim_alpha,sim_energy, hillas, antenna_positions,ant_pos_uvw,fluence11,fluence21,fluence41=sim.ProcessSim(sim_dir[i], runnr[i])# fluence in J
         ant_pos,times,efield,zenith,az,energy,xmax=sim.get_efield(sim_dir[i], runnr[i])
         em_energy_hold,other_energy_hold,total_energy_hold=sim.getEM(sim_dir[i], runnr[i])
         
@@ -101,7 +122,36 @@ for i in np.arange(start_id,stop_id):
 
         fluence=flu.calculate_energy_fluence(filtered_efield, times, signal_window=100., remove_noise=True)
 
-        Erad=rad.integral(fluence,ant_pos_shower)
+        Erad_new=rad.integral(fluence,ant_pos_shower)
+
+
+        pos_uvw_vxb=ant_pos_uvw[0::8]
+        pos_uvw_vxvxb=ant_pos_uvw[2::8]
+        neg_uvw_vxvxb=ant_pos_uvw[6::8]
+            
+            
+        fluence_vxb=fluence21[0::8]
+        fluence_pos_vxvxb=fluence21[2::8]
+        fluence_neg_vxvxb=fluence21[6::8]
+            
+        pos_vxvxb_all=np.concatenate([neg_uvw_vxvxb.T[1],pos_uvw_vxvxb.T[1]])
+        fluence_vxvxb_0=np.concatenate([fluence_pos_vxvxb.T[0],fluence_neg_vxvxb.T[0]])
+        fluence_vxvxb_1=np.concatenate([fluence_pos_vxvxb.T[1],fluence_neg_vxvxb.T[1]])
+            
+            
+        inds = pos_vxvxb_all.argsort()
+            
+        sorted_pos=pos_vxvxb_all[inds]
+        sorted_fluence_vxb=fluence_vxvxb_0[inds]
+        sorted_fluence_vxvxb=fluence_vxvxb_1[inds]
+        
+        f0 = interp1d(sorted_pos, sorted_fluence_vxb, kind='cubic')
+        f1 = interp1d(sorted_pos, sorted_fluence_vxvxb, kind='cubic')
+        
+        xnew = np.linspace(0, 400, num=1000, endpoint=True)
+            
+        Erad=integrate(xnew,f0(xnew),f1(xnew))
+  
         
         #print 'xmax: {0}'.format(xmax)
         hi=helper.get_vertical_height(xmax,atm)   # height in cm
@@ -126,12 +176,13 @@ for i in np.arange(start_id,stop_id):
         StoE=rad.StoEm(Srd_final)
         
         #print 'Er:    {0:.2f}'.format(Erad)
-        #print 'S basic:    {0:.2f}'.format(S)
-        #print 'Srd:        {0:.2f}'.format(Srd)
+        print 'S basic:    {0:.2f}'.format(S)
+        print 'Srd:        {0:.2f}'.format(Srd)
         #rint 'Srd final:  {0:.2f}'.format(Srd_final)
         #print 'Em Energy:  {0:.2f}'.format(em_energy_hold*1e9)
         #print 'S to Em Energy:  {0:.2f}'.format(StoE)
-
+        print 'e_rad new/e_Rad: {0}'.format(Erad_new/Erad)
+        #print 'e_rad: {0}'.format()
 
         em_energy_list.append(em_energy_hold*1e9)
         other_energy_list.append(other_energy_hold*1e9)
@@ -148,11 +199,10 @@ for i in np.arange(start_id,stop_id):
         Srd_1_list.append(Srd)
         Srd_2_list.append(Srd_final)
         StoE_list.append(StoE)
-
-
+        rho_list.append(rho)
 
     #except:
-#   print 'bad event'
+#print 'bad event'
 
 info={'em_energy':np.asarray(em_energy_list),
     'other_energy':np.asarray(other_energy_list),
@@ -169,12 +219,14 @@ info={'em_energy':np.asarray(em_energy_list),
     'Srd_1':np.asarray(Srd_1_list),
     'Srd_2':np.asarray(Srd_2_list),
     'StoEM':np.asarray(StoE_list),
+    'density':np.asarray(rho_list),
+
 }
 
 
-
+'''
 outfile=open(outfilename,'w')
 cPickle.dump(info,outfile)
 outfile.close()
-
+'''
 

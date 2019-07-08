@@ -7,11 +7,15 @@ from scipy.signal import resample
 import scipy.fftpack as fftp
 import os
 from scipy import signal
+from scipy.optimize import curve_fit
 
-#atm_dir='/Users/kmulrey/radio/atmosphere_files/'
-atm_dir='/vol/astro7/lofar/sim/pipeline/atmosphere_files/'
+
+atm_dir='/Users/kmulrey/radio/atmosphere_files/'
+#atm_dir='/vol/astro7/lofar/sim/pipeline/atmosphere_files/'
 
 conversion_factor_integrated_signal = 2.65441729e-3 * 6.24150934e18  # to convert V**2/m**2 * s -> J/m**2 -> eV/m**2
+
+mag=2.04
 #import pycrtools as cr
 #import process_func as prf
 
@@ -340,7 +344,7 @@ def filter(times,traces, fmin, fmax): # 2d-> time,data
     highcut=fmax*1e6
     low = lowcut/nyq
     high = highcut/nyq
-    order=1
+    order=3
     b, a = signal.butter(order, [low, high], btype='band')
 
     for i in np.arange(nTraces):
@@ -392,3 +396,29 @@ def getEM(datadir,fileno):
     other_dep=np.sum(longinfo.T[4]+longinfo.T[5]+longinfo.T[6]+longinfo.T[7]+longinfo.T[8])
     
     return em_dep,other_dep,total_dep
+
+def test_lin(x, a,b):
+    return b*x+a+7
+
+
+def getFit(x,y):
+    
+    y_use=np.log10(y)
+    x_use=np.log10(x/1.0e18)
+    
+    
+    x_use=x_use[(y_use>-10)*(y_use<10)]
+    y_use=y_use[(y_use>-10)*(y_use<10)]
+    
+    param1,param_cov1=curve_fit(test_lin,x_use,y_use,p0=[1,1])
+    a=param1[0]
+    b=param1[1]
+    perr=np.sqrt(np.diag(param_cov1))
+    a_err=np.power(10,a+perr[0])-np.power(10,a)
+    
+    
+    return np.power(10,a),b,a_err,perr[1]
+
+def energy_to_rad(x,a,b):
+    return a*1e7*(x/1e18)**b#*(mag)**b
+

@@ -3,14 +3,16 @@ import os
 import cPickle
 
 
-#data_dir='/vol/astro3/lofar/sim/kmulrey/energy_scale/integration/compare_energies/output2/'
-data_dir='output/'
+data_dir='/vol/astro3/lofar/sim/kmulrey/energy/LOFARenergy/radio/simulation/output/'
+#data_dir='output/'
 
 file_list=[]
 
 for file in os.listdir(data_dir):
     if file.startswith('proton'):
         file_list.append(data_dir+file)
+
+print file_list
 
 outfilename='compiled_sims_proton.dat'
 
@@ -54,7 +56,7 @@ for i in np.arange(len(file_list)):
     Srd_1_hold=info['Srd_1']
     Srd_2_hold=info['Srd_2']
     StoEM_hold=info['StoEM']
-
+    print xmax_hold
 
     
     try:    
@@ -102,7 +104,6 @@ info={'em_energy':np.asarray(em_energy),
 outfile=open(outfilename,'w')
 cPickle.dump(info,outfile)
 outfile.close()
-
 
 
 

@@ -109,8 +109,8 @@ def get_S(Erad, sinalpha, density, p0=0.250524463912, p1=-2.95290494,
 
 
 
-def get_radiation_energy(Srd, sinalpha, density, p0=0.250524463912,
-                         p1=-2.95290494, b_scale=2.03, b=1.8):
+def get_radiation_energy(Srd, sinalpha, density, p0=0.239,
+                         p1=-3.13, b_scale=2.03, b=1.8):
     """ get radiation energy (S_RD)
         
         Parameters
