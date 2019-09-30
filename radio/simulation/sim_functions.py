@@ -422,3 +422,42 @@ def getFit(x,y):
 def energy_to_rad(x,a,b):
     return a*1e7*(x/1e18)**b#*(mag)**b
 
+
+
+
+
+
+
+def theta_phi( THETA, PHI, PSI, X0, Y0, Z0):
+    # to put ground plane into shower plane
+    #1st ROTATION: counterclockwise from X-axis(N) for angle 'phi' about Z-axis.
+    X1= X0*np.cos(PHI)+Y0*np.sin(PHI)
+    Y1=-X0*np.sin(PHI)+Y0*np.cos(PHI)
+    Z1= Z0
+    #-------------xxx----------------
+    #2nd ROTATION: clockwise from Z-axis for angle 'theta' about Y-axis(W).
+    X2= X1*np.cos(THETA)-Z1*np.sin(THETA)
+    Y2= Y1
+    Z2= X1*np.sin(THETA)+Z1*np.cos(THETA)
+    #-------------xxx----------------
+    #3rd ROTATION: counterclockwise from X-axis(N) for angle 'psi' about Z-axis.
+    a= X2*np.cos(PSI)+Y2*np.sin(PSI)
+    b=-X2*np.sin(PSI)+Y2*np.cos(PSI)
+    c= Z2
+    return a,b,c
+#-------------xxx----------------
+
+
+
+
+
+
+
+
+
+
+
+
+#def LDF_integrand():
+
+

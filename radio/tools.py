@@ -4,6 +4,7 @@ import os
 import cPickle
 import matplotlib.pyplot as plt
 import sys
+plt.ion()
 
 from ROOT import TH1F
 from ROOT import TF1
@@ -203,13 +204,15 @@ def energy_to_rad(x,a,b):
 
 
 def fit_hist(counts,bin_start,bin_stop,nBins,min):
-    
     counts=counts[counts>min]
     binWidth=(bin_stop-bin_start)/nBins
     bins=np.arange(bin_start,bin_stop,binWidth)
-    Hist = TH1F("Hist", "Hist_x;x-axis;Frequency",int(nBins),int(bin_start),int(bin_stop))
-    fit = TF1("fit", "gaus", bin_start,bin_stop)
-    #fit = TF1("fit", "gaus", -200,10000)
+    
+    print bin_stop
+    print bin_start
+    Hist = TH1F("Hist", "Hist_x;x-axis;Frequency",int(nBins),bin_start,bin_stop)
+    #fit = TF1("fit", "gaus", bin_start-1,bin_stop+1)
+    fit = TF1("fit", "gaus", -0.2,0.2)
     
     for i in np.arange(len(counts)):
         Hist.Fill(counts[i])
@@ -220,10 +223,25 @@ def fit_hist(counts,bin_start,bin_stop,nBins,min):
     p1=fit.GetParameter(1)
     p2=fit.GetParameter(2)
 
-    x=np.arange(bin_start,bin_stop,0.005)
+    x=np.arange(bin_start,bin_stop,binWidth/5)
     y=np.zeros([len(x)])
     for i in np.arange(len(x)):
         y[i]=fit.Eval(x[i])
+
+
+    '''
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1,1,1)
+
+
+
+    ax1.hist(counts,alpha=0.7,bins=bins)
+    ax1.plot(x, y,color='green',linewidth=2,label='mean {0:.2f}\n spread {1:.2f}'.format(p1,p2))
+
+    plt.show()
+    raw_input()
+    plt.close()
+    '''
     
     return p0, p1, p2, x, y
 
@@ -246,9 +264,11 @@ def fit_hist_land(counts,bin_start,bin_stop,nBins,min):
     p2=fit.GetParameter(2)
 
     x=np.arange(bin_start,bin_stop,0.005)
+
     y=np.zeros([len(x)])
     for i in np.arange(len(x)):
         y[i]=fit.Eval(x[i])
+
     
     return p0, p1, p2, x, y
 
@@ -271,3 +291,32 @@ def inverse_pred(E_rad):
 def simulation_pred(E,index=1.8):
     E_rad = 11.9e6*(E*1e-18)**2*2.04**index
     return E_rad
+
+
+def chi2(y1,y2,sig1):
+    chi2=0
+    for i in np.arange(len(y1)):
+        chi2=chi2+((y1[i]-y2[i])**2)/(sig1[i]**2)
+    return chi2
+
+
+def e(pars,energy,rad,std):
+    
+    
+    #pars a,b
+    a=pars[0]
+    b=pars[1]
+    
+    y=a*1e7*np.power((energy*1e-18),b)
+
+    
+    #logR=np.log10(a)+7+b*np.log10(energy*1e-18)#+b*np.log10(mag)
+    #log_r=np.log10(rad)
+    
+  
+    #log_std=((b*std_use*1e-18)/((energy_use*1e-18)*np.log(10)))**2
+    #X2=np.sum(((logR-log_r)**2)/std**2)/len(energy)
+    X2=np.sum(((np.log10(rad)-np.log10(y))**2)/(np.log10(std))**2)
+    #X2=np.sum(((np.log10(rad)-np.log10(y))**2)/(np.log10(energy)))/len(energy)
+
+    return X2
